@@ -1,10 +1,10 @@
 Esse arquivo contem um pequeno guia para contribuições com o desenvolvimento do simulador. Leve em consideração:
 
 * Adicionar novas instruções requer a mudança em muitos dos modulos, já que o simulador utiliza a comunicação de vários módulos para sua execução. Alguns dos arquivos onde novas instruções devem ter valores inseridos manualmente:
-    - res_control (designa para qual estaçao de reserva a isntrução será enviada)
+    - res_control (designa para qual estaçao de reserva a instrução será enviada)
     - res_station (onde o calculo da instrucao ocorre)
     - main (controle de latências de cada instrução)
-    - sl_buffer (designa para qual estaçao de reserva a isntrução será enviada)
+    - sl_buffer (designa para qual estaçao de reserva a instrução será enviada)
     - issue_control (define para quais modulos a instrucao sera enviada no despacho)
 
 
