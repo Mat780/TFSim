@@ -12,7 +12,9 @@ out-of-order execution on modern microprocessors.
 	```apt install -y unzip libx11-dev libxft-dev libasound2-dev libxcursor-dev```
 2. Execute o script na raíz do repositório para instalar as dependências do simulador
 	`sh get_dep.sh`
-3. Execute com `./tfsim`
+3. Execute o arquivo de montagem
+	`make`
+4. Execute com `./tfsim`
 		
 
 - Para maioria dos benchmarks, arquivos de memória e registradores são carregados juntamente com o conjunto de instruções.

@@ -7,6 +7,7 @@ tam(sz),
 flag_mode(flag_mode),
 preditor(pred_size),
 branch_prediction_buffer(buffer_size, pred_size),
+mn_predictor(buffer_size, pred_size),
 gui_table(gui),
 instr_queue_gui(instr_gui)
 {
@@ -171,8 +172,11 @@ void reorder_buffer::leitura_issue()
             if(flag_mode == 1){
                 ptrs[pos]->prediction = preditor.predict();
             }
-            else{
+            else if(flag_mode == 2){
                 ptrs[pos]->prediction = branch_prediction_buffer.bpb_predict(ptrs[pos]->pc);
+            }
+            else if(flag_mode == 3){
+                ptrs[pos]->prediction = mn_predictor.predictor_m_n_predict();
             }
             
             if(ptrs[pos]->prediction){
@@ -267,8 +271,10 @@ void reorder_buffer::new_rob_head()
                 cout << "Atualizando bpb" << endl << flush;
                 if(flag_mode == 1){
                     preditor.update_state(pred, hit);
-                }else{
+                }else if(flag_mode == 2){
                     branch_prediction_buffer.bpb_update_state(rob_buff[0]->pc, pred, hit);
+                }else if(flag_mode == 3){
+                    mn_predictor.predictor_m_n_update_state(pred, hit);
                 }
                 break;
 
@@ -572,6 +578,10 @@ branch_predictor reorder_buffer::get_preditor() {
 
 bpb reorder_buffer::get_bpb() {
     return branch_prediction_buffer;
+}
+
+branch_m_n_predictor reorder_buffer::get_m_n_predictor() {
+    return mn_predictor;
 }
 
 int reorder_buffer::get_mem_count(){

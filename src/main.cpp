@@ -23,11 +23,12 @@ int sc_main(int argc, char *argv[])
     using namespace nana;
     vector<string> instruction_queue;
     string bench_name = "";
-    int nadd,nmul,nls, n_bits, bpb_size, cpu_freq;
+    int nadd,nmul,nls, n_bits, bpb_size, m_size, cpu_freq;
     nadd = 3;
     nmul = nls = 2;
     n_bits = 2;
     bpb_size = 4;
+    m_size = 2;
     cpu_freq = 500; // definido em Mhz - 500Mhz default
     std::vector<int> sizes;
     bool spec = false;
@@ -91,6 +92,7 @@ int sc_main(int argc, char *argv[])
             spec = true;
             mode = 1;
             spec_sub->checked(1, false);
+            spec_sub->checked(2, false);
         }
         else{
             spec = false;
@@ -106,6 +108,22 @@ int sc_main(int argc, char *argv[])
             spec = true;
             mode = 2;
             spec_sub->checked(0, false);
+            spec_sub->checked(2, false);
+        }
+        else{
+            spec = false;
+            mode = 0;
+        }
+
+        set_spec(plc, spec);
+    });
+    spec_sub->append("Correlation (m,n) Branch prediction", [&](menu::item_proxy &ip)
+    {
+        if(ip.checked()){
+            spec = true;
+            mode = 3;
+            spec_sub->checked(1, false);
+            spec_sub->checked(0, false);
         }
         else{
             spec = false;
@@ -116,17 +134,20 @@ int sc_main(int argc, char *argv[])
     });
     spec_sub->check_style(0,menu::checks::highlight);
     spec_sub->check_style(1,menu::checks::highlight);
+    spec_sub->check_style(2,menu::checks::highlight);
 
     op.append("Modificar valores...");
     // novo submenu para escolha do tamanho do bpb e do preditor
     auto sub = op.create_sub_menu(1);
-    sub->append("Tamanho do BPB e Preditor", [&](menu::item_proxy &ip)
+    sub->append("Tamanho do BPB, M e Preditor", [&](menu::item_proxy &ip)
     {
         inputbox ibox(fm, "", "Definir tamanhos");
-        inputbox::integer size("BPB", bpb_size, 2, 10, 2);
+        inputbox::integer sizeM("M", m_size, 2, 5, 1);
+        inputbox::integer sizeBPB("BPB", bpb_size, 2, 10, 2);
         inputbox::integer bits("N_BITS", n_bits, 1, 3, 1);
-        if(ibox.show_modal(size, bits)){
-            bpb_size = size.value();
+        if(ibox.show_modal(sizeM, sizeBPB, bits)){
+            m_size = sizeM.value();
+            bpb_size = sizeBPB.value();
             n_bits = bits.value();
         }
     });
@@ -385,7 +406,9 @@ int sc_main(int argc, char *argv[])
     });
     op.append("Benchmarks");
     auto bench_sub = op.create_sub_menu(3);
+    int bench_sub_size = 0;
     bench_sub->append("Fibonacci",[&](menu::item_proxy &ip){
+        bench_sub_size += 1;
         string path = "in/benchmarks/fibonacci/fibonacci.txt";
         bench_name = "fibonacci";        
         inFile.open(path);
@@ -395,6 +418,7 @@ int sc_main(int argc, char *argv[])
             fila = true;
     });
     bench_sub->append("Stall por Divisão",[&](menu::item_proxy &ip){
+        bench_sub_size += 1;
         string path = "in/benchmarks/division_stall.txt";       
         inFile.open(path);
         if(!add_instructions(inFile,instruction_queue,instruct))
@@ -403,6 +427,7 @@ int sc_main(int argc, char *argv[])
             fila = true;
     });
     bench_sub->append("Stress de Memória (Stores)",[&](menu::item_proxy &ip){
+        bench_sub_size += 1;
         string path = "in/benchmarks/store_stress/store_stress.txt";   
         bench_name = "store_stress";  
         inFile.open(path);
@@ -412,6 +437,7 @@ int sc_main(int argc, char *argv[])
             fila = true;
     });
     bench_sub->append("Stall por hazard estrutural (Adds)",[&](menu::item_proxy &ip){
+        bench_sub_size += 1;
         string path = "in/benchmarks/res_stations_stall.txt";       
         inFile.open(path);
         if(!add_instructions(inFile,instruction_queue,instruct))
@@ -420,6 +446,7 @@ int sc_main(int argc, char *argv[])
             fila = true;
     }); 
     bench_sub->append("Busca Linear",[&](menu::item_proxy &ip){
+        bench_sub_size += 1;
         string path = "in/benchmarks/linear_search/linear_search.txt";
         bench_name = "linear_search";
         inFile.open(path);
@@ -468,6 +495,7 @@ int sc_main(int argc, char *argv[])
     });
 
     bench_sub->append("Busca Binária",[&](menu::item_proxy &ip){
+        bench_sub_size += 1;
         string path = "in/benchmarks/binary_search/binary_search.txt";
         bench_name = "binary_search";
         inFile.open(path);
@@ -516,6 +544,7 @@ int sc_main(int argc, char *argv[])
     });
 
     bench_sub->append("Matriz Search",[&](menu::item_proxy &ip){
+        bench_sub_size += 1;
         string path = "in/benchmarks/matriz_search/matriz_search.txt";
         bench_name = "matriz_search";
         inFile.open(path);
@@ -564,6 +593,7 @@ int sc_main(int argc, char *argv[])
     });
 
     bench_sub->append("Bubble Sort",[&](menu::item_proxy &ip){
+        bench_sub_size += 1;
         string path = "in/benchmarks/bubble_sort/bubble_sort.txt";
         bench_name = "bubble_sort";
         inFile.open(path);
@@ -612,6 +642,7 @@ int sc_main(int argc, char *argv[])
     });
 
     bench_sub->append("Insertion Sort",[&](menu::item_proxy &ip){
+        bench_sub_size += 1;
         string path = "in/benchmarks/insertion_sort/insertion_sort.txt";
         bench_name = "insertion_sort";
         inFile.open(path);
@@ -660,6 +691,7 @@ int sc_main(int argc, char *argv[])
     });
 
     bench_sub->append("Tick Tack",[&](menu::item_proxy &ip){
+        bench_sub_size += 1;
         string path = "in/benchmarks/tick_tack/tick_tack.txt";
         bench_name = "tick_tack";
         inFile.open(path);
@@ -669,6 +701,142 @@ int sc_main(int argc, char *argv[])
             fila = true;
         
         path = "in/benchmarks/tick_tack/regs.txt";
+        inFile.open(path);
+            if(!inFile.is_open())
+                show_message("Arquivo inválido","Não foi possível abrir o arquivo!");
+            else
+            {
+                auto reg_gui = reg.at(0);
+                int value,i = 0;
+                while(inFile >> value && i < 32)
+                {
+                    reg_gui.at(i).text(1,std::to_string(value));
+                    i++;
+                }
+                for(; i < 32 ; i++)
+                    reg_gui.at(i).text(1,"0");
+                inFile.close();
+            }
+    });
+
+    bench_sub->append("Benchmark_1",[&](menu::item_proxy &ip){
+        bench_sub_size += 1;
+        string path = "in/benchmarks/benchmark_1/benchmark_1.txt";
+        bench_name = "benchmark_1";
+        inFile.open(path);
+        if(!add_instructions(inFile,instruction_queue,instruct))
+            show_message("Arquivo inválido","Não foi possível abrir o arquivo");
+        else
+            fila = true;
+        
+        path = "in/benchmarks/benchmark_1/regs.txt";
+        inFile.open(path);
+            if(!inFile.is_open())
+                show_message("Arquivo inválido","Não foi possível abrir o arquivo!");
+            else
+            {
+                auto reg_gui = reg.at(0);
+                int value,i = 0;
+                while(inFile >> value && i < 32)
+                {
+                    reg_gui.at(i).text(1,std::to_string(value));
+                    i++;
+                }
+                for(; i < 32 ; i++)
+                    reg_gui.at(i).text(1,"0");
+                inFile.close();
+            }
+    });
+
+    bench_sub->append("Benchmark_2",[&](menu::item_proxy &ip){
+        bench_sub_size += 1;
+        string path = "in/benchmarks/benchmark_2/benchmark_2.txt";
+        bench_name = "benchmark_2";
+        inFile.open(path);
+        if(!add_instructions(inFile,instruction_queue,instruct))
+            show_message("Arquivo inválido","Não foi possível abrir o arquivo");
+        else
+            fila = true;
+        
+        path = "in/benchmarks/benchmark_2/regs.txt";
+        inFile.open(path);
+            if(!inFile.is_open())
+                show_message("Arquivo inválido","Não foi possível abrir o arquivo!");
+            else
+            {
+                auto reg_gui = reg.at(0);
+                int value,i = 0;
+                while(inFile >> value && i < 32)
+                {
+                    reg_gui.at(i).text(1,std::to_string(value));
+                    i++;
+                }
+                for(; i < 32 ; i++)
+                    reg_gui.at(i).text(1,"0");
+                inFile.close();
+            }
+        // Ele usa a memoria que vem padrão no simulador
+    });
+
+        bench_sub->append("Benchmark_3",[&](menu::item_proxy &ip){
+        bench_sub_size += 1;
+        string path = "in/benchmarks/benchmark_3/benchmark_3.txt";
+        bench_name = "benchmark_3";
+        inFile.open(path);
+        if(!add_instructions(inFile,instruction_queue,instruct))
+            show_message("Arquivo inválido","Não foi possível abrir o arquivo");
+        else
+            fila = true;
+        
+        path = "in/benchmarks/benchmark_3/regs.txt";
+        inFile.open(path);
+            if(!inFile.is_open())
+                show_message("Arquivo inválido","Não foi possível abrir o arquivo!");
+            else
+            {
+                auto reg_gui = reg.at(0);
+                int value,i = 0;
+                while(inFile >> value && i < 32)
+                {
+                    reg_gui.at(i).text(1,std::to_string(value));
+                    i++;
+                }
+                for(; i < 32 ; i++)
+                    reg_gui.at(i).text(1,"0");
+                inFile.close();
+            }
+        path = "in/benchmarks/benchmark_3/memory.txt";
+        inFile.open(path);
+            if(!inFile.is_open())
+                show_message("Arquivo inválido","Não foi possível abrir o arquivo!");
+            else
+            {
+                int i = 0;
+                int value;
+                while(inFile >> value && i < 500)
+                {
+                    memory.Set(i,std::to_string(value));
+                    i++;
+                }
+                for(; i < 500 ; i++)
+                {
+                    memory.Set(i,"0");
+                }
+                inFile.close();
+            }
+    });
+
+    bench_sub->append("Benchmark_5",[&](menu::item_proxy &ip){
+        bench_sub_size += 1;
+        string path = "in/benchmarks/benchmark_5/benchmark_5.txt";
+        bench_name = "benchmark_5";
+        inFile.open(path);
+        if(!add_instructions(inFile,instruction_queue,instruct))
+            show_message("Arquivo inválido","Não foi possível abrir o arquivo");
+        else
+            fila = true;
+        
+        path = "in/benchmarks/benchmark_5/regs.txt";
         inFile.open(path);
             if(!inFile.is_open())
                 show_message("Arquivo inválido","Não foi possível abrir o arquivo!");
@@ -875,11 +1043,11 @@ int sc_main(int argc, char *argv[])
             op.enabled(0,false);
             op.enabled(1,false);
             op.enabled(3,false);
-            for(int i = 0; i < 2; i++)
+            for(int i = 0; i < 3; i++)
                 spec_sub->enabled(i, false);
             for(int i = 0 ; i < 8 ; i++)
                 sub->enabled(i,false);
-            for(int i = 0 ; i < 10 ; i++)
+            for(int i = 0 ; i < bench_sub_size ; i++)
                 bench_sub->enabled(i,false);
             if(spec){
                 // Flag mode setada pela escolha no menu
@@ -887,6 +1055,8 @@ int sc_main(int argc, char *argv[])
                     top1.rob_mode(n_bits,nadd,nmul,nls,instruct_time,instruction_queue,table,memory,reg,instruct,clock_count,rob);
                 else if(mode == 2)
                     top1.rob_mode_bpb(n_bits, bpb_size, nadd,nmul,nls,instruct_time,instruction_queue,table,memory,reg,instruct,clock_count,rob);
+                else if (mode == 3)
+                    top1.rob_mode_m_n(n_bits,nadd,nmul,nls,instruct_time,instruction_queue,table,memory,reg,instruct,clock_count,rob, m_size);
             }
             else
                 top1.simple_mode(nadd,nmul,nls,instruct_time,instruction_queue,table,memory,reg,instruct,clock_count);
